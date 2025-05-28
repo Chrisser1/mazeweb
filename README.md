@@ -44,13 +44,13 @@ cd my-project
 ### 🛠️ Build with `wasm-pack build`
 
 ```
-wasm-pack build
+wasm-pack build --target web
 ```
 
 ### 🔬 Test in Headless Browsers with `wasm-pack test`
 
 ```
-wasm-pack test --headless --firefox
+wasm-pack test --headless --firefox web
 ```
 
 ### 🎁 Publish to NPM with `wasm-pack publish`
