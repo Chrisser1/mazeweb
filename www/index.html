@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Mazeweb</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: sans-serif;
+        background-color: #f9f9f9;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        height: 100vh;
+      }
+      #controls {
+        display: flex;
+        gap: 10px;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+      }
+      canvas {
+        border: 1px solid #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="controls">
+      <label for="width">Width:</label>
+      <input type="number" id="width" value="50" min="5" max="100">
+
+      <label for="height">Height:</label>
+      <input type="number" id="height" value="50" min="5" max="100">
+
+      <label for="generator">Generator:</label>
+      <select id="generator">
+        <option value="aldous_broder">Aldous-Broder</option>
+        <option value="recursive_division">Recursive Division</option>
+      </select>
+
+      <label for="speed">Speed (ms):</label>
+      <input type="number" id="speed" value="100" min="1" step="1">
+
+      <button id="generate">Generate Maze</button>
+      <button id="step-back">⏮️</button>
+      <button id="play-pause">⏸</button>
+      <button id="step-forward">⏭️</button>
+
+      <label for="step-slider">Step:</label>
+      <input type="range" id="step-slider" value="0" min="0" step="1">
+      <span id="step-label">Step: 0</span>
+
+    </div>
+    <canvas id="mazeweb-canvas"></canvas>
+    <script type="module" src="./bootstrap.js"></script>
+  </body>
+</html>
