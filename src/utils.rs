@@ -30,27 +30,13 @@ pub fn pick_random_neighbor(row: u32, col: u32, width: u32, height: u32) -> (u32
         let dir = (Math::random() * 4.0).floor() as u32;
 
         let (new_row, new_col) = match dir {
-            0 if row >= 2 => (row - 2, col),               // Up
-            1 if row + 2 < height => (row + 2, col),       // Down
-            2 if col >= 2 => (row, col - 2),               // Left
-            3 if col + 2 < width => (row, col + 2),        // Right
+            0 if row > 0 => (row - 1, col),        // North
+            1 if row + 1 < height => (row + 1, col), // South
+            2 if col > 0 => (row, col - 1),        // West
+            3 if col + 1 < width => (row, col + 1), // East
             _ => continue,
         };
 
         return (new_row, new_col);
     }
-}
-
-pub fn choose_random_path_cell(rows: u32, cols: u32) -> (u32, u32) {
-    let path_rows = (rows + 1) / 2;
-    let path_cols = (cols + 1) / 2;
-
-    let r = (Math::random() * path_rows as f64).floor() as u32;
-    let c = (Math::random() * path_cols as f64).floor() as u32;
-
-    // Convert to real grid coordinates (must be even numbers)
-    let row = r * 2;
-    let col = c * 2;
-
-    (row, col)
 }

@@ -1,6 +1,5 @@
 use js_sys::Math::random;
-
-use crate::{cell::Cell, maze::{Maze, MazeChange}};
+use crate::{cell::{CellType, WALL_E, WALL_N, WALL_S, WALL_W}, maze::{Maze, MazeChange}};
 use super::generator::MazeGenerator;
 
 pub struct RecursiveDivision;
@@ -10,10 +9,10 @@ impl MazeGenerator for RecursiveDivision {
         let mut steps = Vec::new();
         let mut maze = original_maze.clone();
 
-        // Start with a blank maze
-        let clearing = self.make_all_into(&mut maze, Cell::Empty);
-        if !clearing.is_empty() {
-            steps.push(clearing);
+        // Start with all walls removed
+        let clear_step = self.remove_all_walls(&mut maze);
+        if !clear_step.is_empty() {
+            steps.push(clear_step);
         }
 
         let mut stack = vec![Division {
@@ -25,46 +24,27 @@ impl MazeGenerator for RecursiveDivision {
         }];
 
         while let Some(Division { x, y, width, height, orientation }) = stack.pop() {
-            if width < 3 || height < 3 {
+            if width < 2 || height < 2 {
                 continue;
             }
 
             let horizontal = matches!(orientation, Orientation::Horizontal);
 
-            // Determine wall position (odd coordinate)
-            let wall_x = if horizontal {
-                0 // unused
-            } else {
-                x + 1 + 2 * ((random() * ((width.saturating_sub(2) / 2) as f64)).floor() as u32)
-            };
+            // Choose wall position within correct bounds
+            let wx = if horizontal { x } else { x + 1 + (random() * ((width - 2) as f64)).floor() as u32 };
+            let wy = if horizontal { y + 1 + (random() * ((height - 2) as f64)).floor() as u32 } else { y };
 
-            let wall_y = if horizontal {
-                y + 1 + 2 * ((random() * ((height.saturating_sub(2) / 2) as f64)).floor() as u32)
-            } else {
-                0 // unused
-            };
-
-            // Determine passage position (even coordinate)
-            let passage_x = if horizontal {
-                x + 2 * ((random() * ((width / 2) as f64)).floor() as u32)
-            } else {
-                wall_x
-            };
-
-            let passage_y = if horizontal {
-                wall_y
-            } else {
-                y + 2 * ((random() * ((height / 2) as f64)).floor() as u32)
-            };
+            // Choose passage position on the wall line
+            let px = if horizontal { x + (random() * (width as f64)).floor() as u32 } else { wx };
+            let py = if horizontal { wy } else { y + (random() * (height as f64)).floor() as u32 };
 
             let dx = if horizontal { 1 } else { 0 };
             let dy = if horizontal { 0 } else { 1 };
-
-            let (wx, wy) = if horizontal { (x, wall_y) } else { (wall_x, y) };
             let length = if horizontal { width } else { height };
 
             let mut wall_step = Vec::new();
 
+            // Place wall
             for i in 0..length {
                 let cx = wx + i * dx;
                 let cy = wy + i * dy;
@@ -73,57 +53,43 @@ impl MazeGenerator for RecursiveDivision {
                     continue;
                 }
 
-                let old = maze.get_cell(cy, cx);
-                maze.set_cell(cy, cx, Cell::Wall);
-                wall_step.push(MazeChange {
-                    row: cy,
-                    col: cx,
-                    old,
-                    new: Cell::Wall,
-                });
+                if horizontal {
+                    self.add_wall_dir(&mut maze, cy, cx, -1, 0, &mut wall_step);
+                } else {
+                    self.add_wall_dir(&mut maze, cy, cx, 0, -1, &mut wall_step);
+                }
             }
 
             if !wall_step.is_empty() {
                 steps.push(wall_step);
             }
 
-            // Remove the passage
-            let mut passage_step = Vec::new();
-            let old_passage = maze.get_cell(passage_y, passage_x);
-            maze.set_cell(passage_y, passage_x, Cell::Changeing);
-            passage_step.push(MazeChange {
-                row: passage_y,
-                col: passage_x,
-                old: old_passage,
-                new: Cell::Changeing,
-            });
-            steps.push(passage_step);
-
-            let mut passage_step_2 = Vec::new();
-            maze.set_cell(passage_y + dy, passage_x + dx, Cell::Empty);
-            passage_step_2.push(MazeChange {
-                row: passage_y,
-                col: passage_x,
-                old: Cell::Changeing,
-                new: Cell::Empty,
-            });
-            steps.push(passage_step_2);
-
-            // Subdivide
-            let (nx1, ny1, w1, h1, nx2, ny2, w2, h2) = if horizontal {
-                (
-                    x, y, width, wall_y - y,
-                    x, wall_y + 1, width, y + height - wall_y - 1
-                )
+            // Explicitly visualize removing walls for the passage
+            let mut carve = Vec::new();
+            if horizontal {
+                self.remove_wall_dir(&mut maze, py, px, -1, 0, &mut carve);
             } else {
-                (
-                    x, y, wall_x - x, height,
-                    wall_x + 1, y, x + width - wall_x - 1, height
-                )
+                self.remove_wall_dir(&mut maze, py, px, 0, -1, &mut carve);
+            }
+            if !carve.is_empty() {
+                steps.push(carve);
+            }
+
+            // Subdivide the remaining areas
+            let (nx1, ny1, w1, h1, nx2, ny2, w2, h2) = if horizontal {
+                // top region
+                (x, y, width, wy - y,
+                 // bottom region
+                 x, wy, width, y + height - wy)
+            } else {
+                // left region
+                (x, y, wx - x, height,
+                 // right region
+                 wx, y, x + width - wx, height)
             };
 
             for (sx, sy, sw, sh) in [(nx1, ny1, w1, h1), (nx2, ny2, w2, h2)] {
-                if sw >= 3 && sh >= 3 {
+                if sw >= 2 && sh >= 2 {
                     stack.push(Division {
                         x: sx,
                         y: sy,

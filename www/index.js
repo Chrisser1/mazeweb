@@ -1,17 +1,27 @@
-import init, { Maze, Cell, MazeBuilder } from "../pkg/mazeweb.js";
+import init, { Maze, Cell, MazeBuilder, CellType } from "../pkg/mazeweb.js";
 
 
 // === Constants ===
 const wasmInit = await init();
 const memory = wasmInit.memory;
+// Constants for cell types and colors
+const TYPE_MASK = 0b11110000;
 const OUTLINE_COLOR = "#b86134";
-const EMPTY_COLOR = "#dad7da";
+const DEFAULT_COLOR = "#dad7da";
 const WALL_COLOR = "#5c2f18";
 const START_COLOR = "#00609b"
 const VISITED_COLOR = "#1d8dcc"
 const GOAL_COLOR = "#847244";
 const LOOKING_AT = "#c49358";
 const CHANGEING = "#7c2a0b";
+const CURRENT_COLOR = "#5A827E";
+const BACKGROUND_COLOR = "#B9D4AA";
+// Constants for wall bits
+const WALL_N = 0b0001;
+const WALL_E = 0b0010;
+const WALL_S = 0b0100;
+const WALL_W = 0b1000;
+const WALL_MASK = 0b00001111;
 
 // === Globals ===
 let maze = Maze.new(50, 50); // default maze size
@@ -44,6 +54,14 @@ const resizeCanvas = () => {
   canvas.width = (cell_size + 1) * width + 1;
 };
 
+const drawMaze = () => {
+  ctx.fillStyle = BACKGROUND_COLOR;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  drawOutline();
+  drawCells();
+}
+
 const drawOutline = () => {
   ctx.beginPath();
   ctx.strokeStyle = OUTLINE_COLOR;
@@ -58,17 +76,48 @@ const drawOutline = () => {
   ctx.stroke();
 };
 
+const drawWalls = (cellValue, row, col, size) => {
+  const x = col * (size + 1) + 1;
+  const y = row * (size + 1) + 1;
+
+  ctx.strokeStyle = WALL_COLOR;
+  ctx.lineWidth = 4;
+
+  ctx.beginPath();
+
+  if (cellValue & WALL_N) {
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + size, y);
+  }
+  if (cellValue & WALL_E) {
+    ctx.moveTo(x + size, y);
+    ctx.lineTo(x + size, y + size);
+  }
+  if (cellValue & WALL_S) {
+    ctx.moveTo(x, y + size);
+    ctx.lineTo(x + size, y + size);
+  }
+  if (cellValue & WALL_W) {
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, y + size);
+  }
+
+  ctx.stroke();
+};
+
 const cellColor = (cellValue) => {
-  switch (cellValue) {
-    case Cell.Empty: return EMPTY_COLOR;
-    case Cell.Wall: return WALL_COLOR;
-    case Cell.Start: return START_COLOR;
-    case Cell.End: return GOAL_COLOR;
-    case Cell.Path: return CHANGING;
-    case Cell.Visited: return VISITED_COLOR;
-    case Cell.LookingAt: return LOOKING_AT;
-    case Cell.Changeing: return CHANGEING;
-    default: return "#000000"; // fallback for unknown values
+  const type = cellValue & TYPE_MASK;
+
+  switch (type) {
+    case CellType.Default: return DEFAULT_COLOR;
+    case CellType.Start: return START_COLOR;
+    case CellType.End: return GOAL_COLOR;
+    case CellType.Path: return CHANGEING;
+    case CellType.Visited: return VISITED_COLOR;
+    case CellType.LookingAt: return LOOKING_AT;
+    case CellType.Current: return CURRENT_COLOR;
+    case CellType.Changing: return CHANGEING;
+    default: return "#111";
   }
 };
 
@@ -88,14 +137,17 @@ const drawCells = () => {
   for (let row = 0; row < height; row++) {
     for (let col = 0; col < width; col++) {
       const index = getIndex(row, col);
-      ctx.fillStyle = cellColor(cells[index]);
+      const cellValue = cells[index];
 
+      ctx.fillStyle = cellColor(cellValue);
       ctx.fillRect(
         col * (cell_size + 1) + 1,
         row * (cell_size + 1) + 1,
         cell_size,
         cell_size
       );
+
+      drawWalls(cellValue, row, col, cell_size); // << render walls
     }
   }
 
@@ -121,8 +173,7 @@ const updateMaze = () => {
   height = newHeight;
 
   resizeCanvas();
-  drawOutline();
-  drawCells();
+  drawMaze();
 };
 
 function updateStepLabel() {
@@ -147,8 +198,7 @@ canvas.addEventListener("click", event => {
   const col = Math.min(Math.floor(canvasLeft / (cell_size + 1)), width - 1);
 
   maze.toggle_cell(row, col);
-  drawOutline();
-  drawCells();
+  drawMaze();
 });
 
 widthInput.addEventListener("input", safeUpdateMaze);
@@ -173,8 +223,7 @@ generateButton.addEventListener("click", () => {
   stepSlider.value = builder.current_step();
   updateStepLabel();
   startAnimation();
-  drawOutline();
-  drawCells();
+  drawMaze();
 });
 
 stepSlider.addEventListener("input", (e) => {
@@ -198,8 +247,7 @@ stepForwardButton.addEventListener("click", () => {
   if (builder && builder.step_forward(maze)) {
     stepSlider.value = builder.current_step();
     updateStepLabel();
-    drawOutline();
-    drawCells();
+    drawMaze();
   }
 });
 
@@ -207,8 +255,7 @@ stepBackButton.addEventListener("click", () => {
   if (builder && builder.step_backward(maze)) {
     stepSlider.value = builder.current_step();
     updateStepLabel();
-    drawOutline();
-    drawCells();
+    drawMaze();
   }
 });
 
@@ -230,8 +277,7 @@ function startAnimation() {
     const moreSteps = builder.step_forward(maze);
     stepSlider.value = builder.current_step();
     updateStepLabel();
-    drawOutline();
-    drawCells();
+    drawMaze();
     if (!moreSteps) stopAnimation();
   }, animationSpeed);
 
@@ -253,8 +299,7 @@ function goToStep(stepIndex) {
   maze = Maze.new(width, height);
   builder.step_to(stepIndex, maze);
   updateStepLabel();
-  drawOutline();
-  drawCells();
+  drawMaze();
 }
 
 
@@ -264,5 +309,4 @@ stepSlider.value = 0;
 stepSlider.max = 0;
 updateMaze();
 resizeCanvas();
-drawOutline();
-drawCells();
+drawMaze();

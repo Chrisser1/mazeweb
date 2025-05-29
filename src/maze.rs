@@ -1,7 +1,7 @@
 use std::{convert::TryInto, fmt};
 use wasm_bindgen::prelude::*;
 
-use crate::{cell::Cell, utils};
+use crate::{cell::{Cell, CellType}, utils};
 
 #[wasm_bindgen]
 #[derive(Clone)]
@@ -19,7 +19,7 @@ impl Maze {
         Maze {
             width,
             height,
-            cells: vec![Cell::Empty; (width * height).try_into().unwrap()],
+            cells: vec![Cell::new(CellType::Default); (width * height).try_into().unwrap()],
         }
     }
 
@@ -34,7 +34,9 @@ impl Maze {
     /// Resets the cells to `Cell::Empty`.
     pub fn set_width(&mut self, width: u32) {
         self.width = width;
-        self.cells = (0..width * self.height).map(|_i| Cell::Empty).collect();
+        self.cells = (0..width * self.height)
+            .map(|_i| Cell::new(CellType::Default))
+            .collect();
     }
 
     /// Set the height of the maze.
@@ -42,7 +44,9 @@ impl Maze {
     /// Resets the cells to `Cell::Empty`.
     pub fn set_height(&mut self, height: u32) {
         self.height = height;
-        self.cells = (0..self.width * height).map(|_i| Cell::Empty).collect();
+        self.cells = (0..self.width * height)
+            .map(|_i| Cell::new(CellType::Default))
+            .collect();
     }
 
     pub fn render(&self) -> String {
@@ -92,13 +96,18 @@ impl Maze {
         let idx = self.get_index(row, col);
         self.cells[idx]
     }
+
+    pub fn get_cell_mut(&mut self, row: u32, col: u32) -> &mut Cell {
+        let idx = self.get_index(row, col);
+        &mut self.cells[idx]
+    }
 }
 
 impl fmt::Display for Maze {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for line in self.cells.as_slice().chunks(self.width as usize) {
             for &cell in line {
-                let symbol = if cell == Cell::Empty { '◻' } else { '◼' };
+                let symbol = if cell.get_type() == CellType::Default { '◻' } else { '◼' };
                 write!(f, "{}", symbol)?;
             }
             write!(f, "\n")?;
