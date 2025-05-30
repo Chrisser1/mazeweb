@@ -1,6 +1,12 @@
-use crate::{cell::{Cell, CellType}, maze::{Maze, MazeChange}, utils};
-
-use super::generator::MazeGenerator;
+use crate::{
+    cell::CellType,
+    generators::generator::MazeGenerator,
+    maze::{
+        Maze,
+        MazeChange
+    },
+    utils
+};
 
 pub struct AdlousBroder {
     total_cells: usize,

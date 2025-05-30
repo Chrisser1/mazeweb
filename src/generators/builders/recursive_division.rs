@@ -1,6 +1,8 @@
 use js_sys::Math::random;
-use crate::{cell::{CellType, WALL_E, WALL_N, WALL_S, WALL_W}, maze::{Maze, MazeChange}};
-use super::generator::MazeGenerator;
+use crate::{
+    generators::generator::MazeGenerator,
+    maze::{Maze, MazeChange}
+};
 
 pub struct RecursiveDivision;
 

@@ -1,6 +1,22 @@
 use wasm_bindgen::prelude::*;
 
-use crate::{cell::{Cell, CellType, TYPE_MASK, WALL_E, WALL_MASK, WALL_N, WALL_S, WALL_W}, generators::aldous_broder::AdlousBroder, maze::{Maze, MazeChange}};
+use crate::{
+    cell::{
+        Cell,
+        CellType,
+        TYPE_MASK, WALL_E,
+        WALL_MASK, WALL_N,
+        WALL_S, WALL_W
+    },
+    generators::builders::{
+        AdlousBroder,
+        Kruskals,
+        Prims,
+        RecursiveDivision
+    },
+    maze::{Maze, MazeChange}
+};
+
 
 pub trait MazeGenerator {
     fn generate_maze_steps(&mut self, maze: &Maze) -> Option<Vec<Vec<MazeChange>>>;
@@ -220,8 +236,6 @@ pub trait MazeGenerator {
 
         changes
     }
-
-
 }
 
 #[wasm_bindgen]
@@ -247,7 +261,9 @@ impl MazeBuilder {
     pub fn with_generator(name: &str) -> MazeBuilder {
         let generator: Box<dyn MazeGenerator> = match name {
             "aldous_broder" => Box::new(AdlousBroder::new()),
-            "recursive_division" => Box::new(crate::generators::recursive_division::RecursiveDivision::new()),
+            "recursive_division" => Box::new(RecursiveDivision::new()),
+            "kruskals" => Box::new(Kruskals::new()),
+            "prims" => Box::new(Prims::new()),
             _ => Box::new(AdlousBroder::new()), // fallback
         };
 
